@@ -1,0 +1,278 @@
+#+TITLE: Module 2: Borrowing and Lifetimes
+#+OPTIONS: toc:2 num:nil
+
+* 🎯 Learning Objectives
+
+By the end of this module, you will understand:
+- References and borrowing (immutable =&T= and mutable =&mut T=)
+- The borrowing rules and why they prevent data races
+- Lifetime annotations and their relationship to scope
+- How Rust prevents dangling references at compile time
+- The difference between Rust references and C++ references/pointers
+
+* 📖 Core Concepts
+
+** 1. References: Borrowing Without Taking Ownership
+
+In Module 1, you learned about ownership. Now you'll learn how to *use* data without *owning* it.
+
+*** The Problem: Ownership is Sometimes Too Strict
+
+#+begin_src rust
+fn calculate_length(s: String) -> (String, usize) {
+    let length = s.len();
+    (s, length)  // Have to return s to give ownership back!
+}
+
+let s1 = String::from("hello");
+let (s1, len) = calculate_length(s1);  // Awkward!
+#+end_src
+
+*** The Solution: References (Borrowing)
+
+#+begin_src rust
+fn calculate_length(s: &String) -> usize {
+    s.len()  // Can use s without owning it
+}  // s goes out of scope, but doesn't Drop because we don't own it
+
+let s1 = String::from("hello");
+let len = calculate_length(&s1);  // Borrow s1
+println!("Length of '{}' is {}", s1, len);  // s1 still valid!
+#+end_src
+
+The =&= symbol means *"borrow a reference"* - you can read the data but don't own it.
+
+** 2. The Borrowing Rules (CRUCIAL!)
+
+Rust enforces these rules at *compile time*:
+
+1. *At any given time*, you can have *either* (but not both):
+   - One mutable reference (=&mut T=), OR
+   - Any number of immutable references (=&T=)
+
+2. *References must always be valid* (no dangling references)
+
+These rules prevent *data races* at compile time!
+
+*** C++ Comparison: Data Races
+
+#+begin_src cpp
+// C++: Data race possible
+std::vector<int> v = {1, 2, 3};
+int& first = v[0];        // Reference to first element
+v.push_back(4);           // May reallocate vector!
+std::cout << first;       // UNDEFINED BEHAVIOR - dangling reference!
+#+end_src
+
+#+begin_src rust
+// Rust: Compiler prevents this!
+let mut v = vec![1, 2, 3];
+let first = &v[0];        // Immutable borrow
+// v.push(4);             // ERROR: can't modify while borrowed!
+println!("{}", first);
+v.push(4);                // OK now - borrow ended
+#+end_src
+
+** 3. Immutable References (=&T=)
+
+Multiple readers are allowed:
+
+#+begin_src rust
+let s = String::from("hello");
+
+let r1 = &s;  // OK
+let r2 = &s;  // OK - multiple immutable borrows allowed
+let r3 = &s;  // OK
+
+println!("{}, {}, {}", r1, r2, r3);  // All valid!
+#+end_src
+
+Think of it like: *"Many readers, no writers"*
+
+** 4. Mutable References (=&mut T=)
+
+Only one mutable reference allowed at a time:
+
+#+begin_src rust
+let mut s = String::from("hello");
+
+let r1 = &mut s;  // OK - first mutable borrow
+// let r2 = &mut s;  // ERROR: can't have two mutable borrows!
+
+r1.push_str(", world");
+println!("{}", r1);
+#+end_src
+
+Think of it like: *"One writer, no readers"*
+
+*** Why This Matters (Data Race Prevention)
+
+A *data race* occurs when:
+1. Two or more pointers access the same data
+2. At least one writes
+3. No synchronization mechanism
+
+Rust's borrowing rules make data races *impossible at compile time*!
+
+** 5. The Scope of References
+
+A reference's scope starts where it's introduced and ends at its *last use*:
+
+#+begin_src rust
+let mut s = String::from("hello");
+
+let r1 = &s;     // Immutable borrow starts
+let r2 = &s;     // Another immutable borrow
+println!("{} and {}", r1, r2);
+// r1 and r2 are no longer used after this point (scope ends)
+
+let r3 = &mut s;  // OK! No immutable borrows active anymore
+r3.push_str(", world");
+#+end_src
+
+This is called *Non-Lexical Lifetimes* (NLL) - introduced in Rust 2018.
+
+** 6. Lifetimes: How Long References Live
+
+Every reference has a *lifetime* - the scope for which it's valid.
+
+*** Implicit Lifetimes
+
+Most of the time, Rust infers lifetimes:
+
+#+begin_src rust
+fn first_word(s: &String) -> &str {
+    &s[0..5]
+}
+#+end_src
+
+Rust knows: "the returned reference lives as long as the input reference"
+
+*** Explicit Lifetime Annotations
+
+Sometimes you need to tell Rust about relationships:
+
+#+begin_src rust
+fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}
+#+end_src
+
+The ='a= means: "All these references have the same lifetime"
+
+This tells Rust: "the returned reference lives as long as the *shortest* of x or y"
+
+*** C++ Comparison
+
+#+begin_src cpp
+// C++: No lifetime checking!
+const char* dangling() {
+    std::string s = "hello";
+    return s.c_str();  // UNDEFINED BEHAVIOR - returns dangling pointer!
+}
+#+end_src
+
+#+begin_src rust
+// Rust: Compiler catches this!
+fn dangling() -> &str {
+    let s = String::from("hello");
+    &s  // ERROR: s will be dropped, can't return reference to it!
+}
+#+end_src
+
+** 7. Common Patterns
+
+*** Pattern 1: Read-Only Access
+
+#+begin_src rust
+fn print_string(s: &String) {
+    println!("{}", s);
+}
+
+let s = String::from("hello");
+print_string(&s);  // Borrow
+print_string(&s);  // Can borrow again!
+#+end_src
+
+*** Pattern 2: Modify in Place
+
+#+begin_src rust
+fn add_exclamation(s: &mut String) {
+    s.push_str("!");
+}
+
+let mut s = String::from("hello");
+add_exclamation(&mut s);
+println!("{}", s);  // "hello!"
+#+end_src
+
+*** Pattern 3: Method Chaining
+
+#+begin_src rust
+let mut s = String::from("hello");
+s.push_str(", world")   // &mut self
+ .push('!');            // Can chain mutable methods
+#+end_src
+
+* 🔬 Examples
+
+See the =examples/= directory for runnable code:
+- =borrowing_basics.rs= - Immutable and mutable borrowing
+- =borrowing_rules.rs= - Demonstrating the borrowing rules
+- =lifetimes_intro.rs= - Basic lifetime annotations
+- =dangling_prevention.rs= - How Rust prevents dangling references
+
+Run examples with:
+#+begin_src bash
+cargo run --example borrowing_basics
+cargo run --example borrowing_rules
+#+end_src
+
+* 💪 Exercises
+
+Work through the exercises in =src/main.rs= by uncommenting sections and fixing compilation errors.
+
+* 🤔 Common Questions from C++ Developers
+
+** Q: Why can't I have multiple mutable references?
+*A*: To prevent data races! If two pieces of code could modify the same data simultaneously, you'd have undefined behavior. Rust prevents this at compile time.
+
+** Q: This is more restrictive than C++. Isn't that bad?
+*A*: It catches bugs at compile time that would be runtime errors (or worse, silent corruption) in C++. The restrictions guide you toward better designs.
+
+** Q: How is =&T= different from C++ =const T&=?
+*A*: Similar concepts! Rust's =&T= is like =const T&=, and =&mut T= is like =T&=. But Rust enforces borrowing rules at compile time.
+
+** Q: What about =Rc= and =Arc= for shared ownership?
+*A*: Those come in Module 7! They're for cases where single ownership doesn't work, similar to =std::shared_ptr=.
+
+** Q: When should I use references vs ownership?
+*A*: 
+- Use =&T= when you just need to *read* data
+- Use =&mut T= when you need to *modify* data
+- Use =T= (ownership) when the function needs to *consume* or *store* the data
+
+* 🔑 Key Takeaways
+
+1. ✅ References let you use data without owning it
+2. ✅ Borrowing rules prevent data races at *compile time*
+3. ✅ Can have many readers OR one writer, not both
+4. ✅ Lifetimes ensure references never dangle
+5. ✅ Most lifetime annotations are inferred automatically
+6. ✅ These restrictions lead to safer, more maintainable code
+
+* 📚 Further Reading
+
+- [[https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html][The Rust Book - References and Borrowing]]
+- [[https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html][The Rust Book - Lifetime Syntax]]
+- [[https://doc.rust-lang.org/nomicon/lifetimes.html][The Rustonomicon - Lifetimes (Advanced)]]
+
+-----
+
+*Previous*: [[file:../01_basics_ownership/README.org][Module 1: Basics and Ownership]]
+
+*Next*: [[file:../03_structs_enums/README.org][Module 3: Structs, Enums, and Pattern Matching]]

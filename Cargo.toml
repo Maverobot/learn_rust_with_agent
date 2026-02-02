@@ -2,7 +2,7 @@
 resolver = "2"
 
 members = [
-    "modules/01_basics_ownership",
+    "modules/01_basics_ownership", "modules/02_borrowing_lifetimes",
     # Future modules will be added here as they're created
     # "modules/02_borrowing_lifetimes",
     # "modules/03_structs_enums",

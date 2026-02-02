@@ -45,9 +45,9 @@ struct Robot {
     std::string name;
     std::pair<double, double> position;
     bool active;
-    
+
     // C++ needs explicit constructor
-    Robot(uint32_t id, std::string name, 
+    Robot(uint32_t id, std::string name,
           std::pair<double, double> pos, bool active)
         : id(id), name(std::move(name)), position(pos), active(active) {}
 };
@@ -88,18 +88,18 @@ impl Robot {
             active: true,
         }
     }
-    
+
     // Method (takes &self)
     fn distance_from_origin(&self) -> f64 {
         let (x, y) = self.position;
         (x * x + y * y).sqrt()
     }
-    
+
     // Mutable method (takes &mut self)
     fn move_to(&mut self, x: f64, y: f64) {
         self.position = (x, y);
     }
-    
+
     // Consuming method (takes self)
     fn deactivate(self) {
         println!("Robot {} deactivated", self.name);
@@ -122,18 +122,18 @@ public:
     // Constructor
     Robot(uint32_t id, std::string name)
         : id(id), name(std::move(name)), position{0.0, 0.0}, active(true) {}
-    
+
     // Const method (like &self in Rust)
     double distanceFromOrigin() const {
         auto [x, y] = position;
         return std::sqrt(x * x + y * y);
     }
-    
+
     // Non-const method (like &mut self in Rust)
     void moveTo(double x, double y) {
         position = {x, y};
     }
-    
+
     // Consumes the object (rare in C++, common in Rust)
     void deactivate() && {  // Rvalue ref qualifier
         std::cout << "Robot " << name << " deactivated\n";
@@ -368,17 +368,17 @@ impl RobotBuilder {
             active: true,
         }
     }
-    
+
     fn position(mut self, x: f64, y: f64) -> Self {
         self.position = Some((x, y));
         self
     }
-    
+
     fn inactive(mut self) -> Self {
         self.active = false;
         self
     }
-    
+
     fn build(self) -> Robot {
         Robot {
             id: self.id,
@@ -455,4 +455,6 @@ cargo run --example option_result
 
 ---
 
-*Next Module*: Error Handling - Deep dive into Result, custom errors, and the ~?~ operator
+*Previous*: [[file:../02_borrowing_lifetimes/README.org][Module 2: Borrowing and Lifetimes]]
+
+*Next*: [[file:../04_error_handling/README.org][Module 4: Error Handling]]

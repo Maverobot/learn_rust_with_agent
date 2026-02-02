@@ -1,0 +1,485 @@
+#+TITLE: Module 4: Error Handling
+#+OPTIONS: toc:nil num:nil
+
+* Learning Objectives
+
+By the end of this module, you will understand:
+- Rust's philosophy: errors as values, not exceptions
+- The ~Result<T, E>~ type in depth
+- The ~?~ operator for error propagation
+- Creating custom error types
+- Converting between error types
+- Best practices for error handling in Rust
+- When to use ~panic!~ vs ~Result~
+
+* Key Concepts
+
+** 1. Rust's Error Handling Philosophy
+
+Rust has two categories of errors:
+
+| Category            | Type       | When to Use                          | Recovery Possible? |
+|---------------------+------------+--------------------------------------+--------------------|
+| *Recoverable Errors*  | ~Result<T, E>~ | Expected failures (file not found, parse error) | ✅ Yes |
+| *Unrecoverable Errors* | ~panic!~    | Bugs, assertions, unrecoverable state | ❌ No |
+
+*C++ Comparison:*
+
+| Rust                | C++ Equivalent        | Key Difference                           |
+|---------------------+-----------------------+------------------------------------------|
+| ~Result<T, E>~      | Exceptions            | Explicit in function signature           |
+| ~panic!~            | ~std::terminate~, ~abort~ | For truly unrecoverable situations |
+| ~Option<T>~         | ~std::optional<T>~    | No null pointers                         |
+
+** 2. Result<T, E> - Deep Dive
+
+~Result~ is an enum defined as:
+
+#+begin_src rust
+enum Result<T, E> {
+    Ok(T),   // Success value
+    Err(E),  // Error value
+}
+#+end_src
+
+*Why Result is better than exceptions:*
+1. *Explicit*: You can see from the function signature that it can fail
+2. *Type-safe*: Compiler forces you to handle errors
+3. *No hidden control flow*: No surprise exceptions
+4. *Zero-cost*: No runtime overhead when not used
+5. *Composable*: Easy to chain operations with ~?~
+
+*Example:*
+
+#+begin_src rust
+use std::fs::File;
+use std::io::Read;
+
+// Function signature tells you it can fail!
+fn read_file(path: &str) -> Result<String, std::io::Error> {
+    let mut file = File::open(path)?;  // Propagate error if file doesn't open
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;  // Propagate error if read fails
+    Ok(contents)  // Success!
+}
+
+// Using the function
+match read_file("config.txt") {
+    Ok(contents) => println!("File contents: {}", contents),
+    Err(e) => eprintln!("Error reading file: {}", e),
+}
+#+end_src
+
+*C++ Comparison:*
+
+#+begin_src cpp
+// C++ with exceptions (implicit error handling)
+std::string readFile(const std::string& path) {
+    std::ifstream file(path);
+    if (!file) {
+        throw std::runtime_error("Failed to open file");
+    }
+    
+    std::string contents;
+    // ... read file
+    return contents;
+    // Where can this throw? You can't tell from the signature!
+}
+
+// Using it
+try {
+    std::string contents = readFile("config.txt");
+    std::cout << "Contents: " << contents << "\n";
+} catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << "\n";
+}
+
+// C++23 with std::expected (similar to Rust's Result)
+std::expected<std::string, std::string> readFile(const std::string& path) {
+    // Similar to Rust's Result!
+    // But Rust had this from the beginning
+}
+#+end_src
+
+** 3. The ? Operator - Error Propagation Magic
+
+The ~?~ operator is syntactic sugar for early return on error:
+
+#+begin_src rust
+// Without ?
+fn read_config() -> Result<String, std::io::Error> {
+    let file = match File::open("config.txt") {
+        Ok(f) => f,
+        Err(e) => return Err(e),  // Early return
+    };
+    
+    let mut contents = String::new();
+    match file.read_to_string(&mut contents) {
+        Ok(_) => {},
+        Err(e) => return Err(e),  // Early return
+    }
+    
+    Ok(contents)
+}
+
+// With ? (much cleaner!)
+fn read_config() -> Result<String, std::io::Error> {
+    let mut file = File::open("config.txt")?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents)
+}
+#+end_src
+
+*How ? works:*
+1. If ~Result~ is ~Ok(value)~, unwrap the value and continue
+2. If ~Result~ is ~Err(e)~, return ~Err(e)~ from the function immediately
+3. Can only be used in functions that return ~Result~ or ~Option~
+
+*C++ Comparison:*
+
+C++ has no direct equivalent. You'd use:
+- ~try/catch~ blocks (different semantics)
+- Manual error checking with ~if~ statements
+- Macros (not language feature)
+
+** 4. Custom Error Types
+
+Create your own error types for better error handling:
+
+#+begin_src rust
+use std::fmt;
+
+// Simple enum for different error kinds
+#[derive(Debug)]
+enum RobotError {
+    NotFound(u32),
+    LowBattery { id: u32, level: u8 },
+    ConnectionLost(String),
+    InvalidCommand(String),
+}
+
+// Implement Display for user-friendly messages
+impl fmt::Display for RobotError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RobotError::NotFound(id) => write!(f, "Robot {} not found", id),
+            RobotError::LowBattery { id, level } => {
+                write!(f, "Robot {} has low battery ({}%)", id, level)
+            }
+            RobotError::ConnectionLost(msg) => write!(f, "Connection lost: {}", msg),
+            RobotError::InvalidCommand(cmd) => write!(f, "Invalid command: {}", cmd),
+        }
+    }
+}
+
+// Implement Error trait (optional but recommended)
+impl std::error::Error for RobotError {}
+
+// Using custom errors
+fn get_robot(id: u32) -> Result<Robot, RobotError> {
+    if id == 0 {
+        return Err(RobotError::NotFound(id));
+    }
+    // ... return robot
+    Ok(Robot { id, name: String::from("Bot") })
+}
+
+struct Robot {
+    id: u32,
+    name: String,
+}
+#+end_src
+
+*C++ Comparison:*
+
+#+begin_src cpp
+// C++ with custom exception class
+class RobotError : public std::exception {
+    std::string message;
+public:
+    RobotError(std::string msg) : message(std::move(msg)) {}
+    const char* what() const noexcept override {
+        return message.c_str();
+    }
+};
+
+// Using it
+Robot getRobot(uint32_t id) {
+    if (id == 0) {
+        throw RobotError("Robot not found");
+    }
+    return Robot{id, "Bot"};
+}
+#+end_src
+
+** 5. Error Type Conversions
+
+Often you need to convert between error types. Rust provides the ~From~ trait:
+
+#+begin_src rust
+use std::io;
+use std::num::ParseIntError;
+
+#[derive(Debug)]
+enum MyError {
+    Io(io::Error),
+    Parse(ParseIntError),
+    Custom(String),
+}
+
+// Implement From for automatic conversions
+impl From<io::Error> for MyError {
+    fn from(err: io::Error) -> Self {
+        MyError::Io(err)
+    }
+}
+
+impl From<ParseIntError> for MyError {
+    fn from(err: ParseIntError) -> Self {
+        MyError::Parse(err)
+    }
+}
+
+// Now ? can automatically convert errors!
+fn read_and_parse() -> Result<u32, MyError> {
+    let contents = std::fs::read_to_string("number.txt")?;  // io::Error → MyError
+    let number: u32 = contents.trim().parse()?;  // ParseIntError → MyError
+    Ok(number)
+}
+#+end_src
+
+** 6. Result Methods - Toolkit for Error Handling
+
+~Result~ has many useful methods:
+
+| Method                  | Purpose                                  | Example                                |
+|-------------------------+------------------------------------------+----------------------------------------|
+| ~unwrap()~              | Panic if Err                             | ~result.unwrap()~                      |
+| ~expect(msg)~           | Panic with custom message if Err         | ~result.expect("Failed!")~             |
+| ~unwrap_or(default)~    | Use default value if Err                 | ~result.unwrap_or(0)~                  |
+| ~unwrap_or_else(fn)~    | Compute default if Err                   | ~result.unwrap_or_else(              | default)~ |
+| ~map(fn)~               | Transform Ok value                       | ~result.map(|x| x * 2)~                |
+| ~map_err(fn)~           | Transform Err value                      | ~result.map_err(|e| format!("{}", e))~ |
+| ~and_then(fn)~          | Chain Result-returning functions         | ~result.and_then(process)~             |
+| ~or_else(fn)~           | Handle error and potentially recover     | ~result.or_else(fallback)~             |
+| ~?~ operator            | Propagate error                          | ~let x = result?;~                     |
+
+*Examples:*
+
+#+begin_src rust
+// Transform success value
+let result: Result<i32, String> = Ok(5);
+let doubled = result.map(|x| x * 2);  // Ok(10)
+
+// Transform error
+let result: Result<i32, u32> = Err(404);
+let with_msg = result.map_err(|code| format!("Error: {}", code));
+// Err("Error: 404")
+
+// Chain operations
+fn parse_and_double(s: &str) -> Result<i32, ParseIntError> {
+    s.parse::<i32>()
+        .map(|x| x * 2)
+}
+
+// Provide fallback
+let result = get_value().or_else(|_| get_default_value());
+#+end_src
+
+** 7. When to Use panic! vs Result
+
+| Use ~panic!~ when...                           | Use ~Result~ when...                        |
+|------------------------------------------------+---------------------------------------------|
+| Bug/programmer error (assertion failure)       | Expected failure (file not found)           |
+| Contract violation                             | User input error                            |
+| Unrecoverable state                            | Network failure                             |
+| In tests                                       | Parsing errors                              |
+| Prototyping (use ~unwrap()~ temporarily)       | Any recoverable error                       |
+
+*Examples:*
+
+#+begin_src rust
+// Use panic! for bugs
+fn divide(a: i32, b: i32) -> i32 {
+    if b == 0 {
+        panic!("Division by zero!");  // Programmer error
+    }
+    a / b
+}
+
+// Use Result for expected failures
+fn divide_safe(a: i32, b: i32) -> Result<i32, String> {
+    if b == 0 {
+        return Err(String::from("Cannot divide by zero"));
+    }
+    Ok(a / b)
+}
+
+// Use panic! for assertions
+fn process_positive(x: i32) {
+    assert!(x > 0, "x must be positive, got: {}", x);
+    // ... process
+}
+
+// Use Result for validation
+fn validate_positive(x: i32) -> Result<i32, String> {
+    if x > 0 {
+        Ok(x)
+    } else {
+        Err(format!("Expected positive number, got: {}", x))
+    }
+}
+#+end_src
+
+** 8. The std::error::Error Trait
+
+Implement this trait for your error types to enable:
+- Error trait objects (~Box<dyn Error>~)
+- Error chaining
+- Integration with ecosystem
+
+#+begin_src rust
+use std::error::Error;
+use std::fmt;
+
+#[derive(Debug)]
+struct MyError {
+    details: String,
+}
+
+impl MyError {
+    fn new(msg: &str) -> MyError {
+        MyError { details: msg.to_string() }
+    }
+}
+
+impl fmt::Display for MyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.details)
+    }
+}
+
+impl Error for MyError {
+    fn description(&self) -> &str {
+        &self.details
+    }
+}
+
+// Now you can use Box<dyn Error> for any error type
+fn do_something() -> Result<(), Box<dyn Error>> {
+    // Can return any error type that implements Error
+    Err(Box::new(MyError::new("Something went wrong")))
+}
+#+end_src
+
+* Common Patterns
+
+** Pattern 1: Early Return with ?
+
+#+begin_src rust
+fn process_data() -> Result<ProcessedData, MyError> {
+    let raw_data = fetch_data()?;
+    let validated = validate(raw_data)?;
+    let processed = transform(validated)?;
+    Ok(processed)
+}
+#+end_src
+
+** Pattern 2: Multiple Error Types with Box<dyn Error>
+
+#+begin_src rust
+use std::error::Error;
+
+fn do_many_things() -> Result<(), Box<dyn Error>> {
+    let file = std::fs::read_to_string("data.txt")?;  // IO error
+    let number: i32 = file.trim().parse()?;            // Parse error
+    let result = fetch_from_network()?;                 // Network error
+    Ok(())
+}
+#+end_src
+
+** Pattern 3: Error Context with map_err
+
+#+begin_src rust
+fn load_config() -> Result<Config, String> {
+    std::fs::read_to_string("config.toml")
+        .map_err(|e| format!("Failed to read config file: {}", e))?
+        .parse()
+        .map_err(|e| format!("Failed to parse config: {}", e))
+}
+#+end_src
+
+** Pattern 4: Combining Results
+
+#+begin_src rust
+// Get first successful result
+fn try_multiple_sources() -> Result<Data, Error> {
+    source_a()
+        .or_else(|_| source_b())
+        .or_else(|_| source_c())
+}
+
+// Collect multiple Results
+fn process_all(items: Vec<Item>) -> Result<Vec<Processed>, Error> {
+    items.into_iter()
+        .map(|item| process_item(item))
+        .collect()  // Short-circuits on first error!
+}
+#+end_src
+
+* Quick Reference
+
+| Concept          | Syntax                           | Use Case                        |
+|------------------+----------------------------------+---------------------------------|
+| Result type      | ~Result<T, E>~                   | Recoverable errors              |
+| Success          | ~Ok(value)~                      | Operation succeeded             |
+| Failure          | ~Err(error)~                     | Operation failed                |
+| Propagate error  | ~?~                              | Return error to caller          |
+| Unwrap           | ~unwrap()~                       | Panic if error (prototyping)    |
+| Expect           | ~expect("msg")~                  | Panic with message              |
+| Default value    | ~unwrap_or(default)~             | Use default on error            |
+| Transform Ok     | ~map(fn)~                        | Transform success value         |
+| Transform Err    | ~map_err(fn)~                    | Transform error                 |
+| Chain Results    | ~and_then(fn)~                   | Sequential operations           |
+| Panic            | ~panic!("msg")~                  | Unrecoverable errors            |
+| Assert           | ~assert!(condition)~             | Debug checks                    |
+| Custom error     | ~impl Error for MyError~         | Domain-specific errors          |
+| Any error        | ~Box<dyn Error>~                 | Multiple error types            |
+
+* Exercises
+
+Work through ~src/main.rs~ to practice:
+1. Using Result for error handling
+2. The ? operator for propagation
+3. Creating custom error types
+4. Converting between error types
+5. Combining multiple Results
+6. When to panic vs return Result
+
+* Examples
+
+#+begin_src bash
+# Basic Result usage
+cargo run --example result_basics
+
+# Custom error types
+cargo run --example custom_errors
+
+# Error propagation and the ? operator
+cargo run --example error_propagation
+
+# Advanced error handling patterns
+cargo run --example error_patterns
+#+end_src
+
+* Further Reading
+
+- The Rust Book: Chapter 9 (Error Handling)
+- Rust by Example: Error Handling
+- ~anyhow~ crate for application errors
+- ~thiserror~ crate for library errors
+
+---
+
+*Next Module*: Traits and Generics - Rust's powerful abstraction system

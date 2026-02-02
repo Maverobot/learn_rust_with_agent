@@ -5,8 +5,8 @@ members = [
     "modules/01_basics_ownership",
     "modules/02_borrowing_lifetimes",
     "modules/03_structs_enums",
+    "modules/04_error_handling",
     # Future modules will be added here as they're created
-    # "modules/04_error_handling",
     # "modules/05_traits_generics",
     # "modules/06_collections_iterators",
     # "modules/07_concurrency",

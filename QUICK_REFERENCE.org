@@ -1,0 +1,115 @@
+#+TITLE: Rust Learning Quick Reference
+#+OPTIONS: toc:2 num:nil
+
+* 🔑 Key Concepts for C++ Engineers
+
+** Ownership Rules
+1. Each value has ONE owner
+2. Only ONE owner at a time
+3. Value dropped when owner goes out of scope
+
+** Move vs Copy
+
+| Type                    | C++              | Rust                    |
+|-------------------------+------------------+-------------------------|
+| Primitives (int, float) | Copy             | Copy                    |
+| std::string             | Copy (expensive) | Move (default)          |
+| std::vector             | Copy (expensive) | Move (default)          |
+| std::unique_ptr         | Move only        | Move (concept built-in) |
+| std::shared_ptr         | Copy (ref count) | Arc (Module 7)          |
+
+** Memory Safety Guarantees
+
+| Bug Type         | C++             | Rust                        |
+|------------------+-----------------+-----------------------------|
+| Use after free   | Runtime error ☠️ | Compile error ✅            |
+| Double free      | Runtime error ☠️ | Compile error ✅            |
+| Dangling pointer | Runtime error ☠️ | Compile error ✅            |
+| Data races       | Runtime error ☠️ | Compile error ✅            |
+| Null pointer     | Runtime error ☠️ | Option<T> (compile time) ✅ |
+
+* 📝 Common Patterns
+
+** Returning Ownership
+#+begin_src rust
+// Instead of passing by value and worrying about copying:
+fn process(data: Vec<i32>) -> Vec<i32> {
+    // Process data...
+    data  // Return ownership
+}
+
+// Better: Use references (Module 2)
+fn process(data: &mut Vec<i32>) {
+    // Process data in place
+}
+#+end_src
+
+** Clone When Necessary
+#+begin_src rust
+let original = vec![1, 2, 3];
+let copy = original.clone();  // Explicit deep copy
+// Both original and copy are valid
+#+end_src
+
+** Copy Types
+#+begin_src rust
+// Automatically implement Copy for simple types
+#[derive(Copy, Clone)]
+struct Point {
+    x: f64,
+    y: f64,
+}
+#+end_src
+
+* 🚀 Compiler Messages
+
+Rust's compiler is your friend! Read the error messages carefully:
+- They explain WHAT went wrong
+- They suggest HOW to fix it
+- They point to the exact line
+
+Example:
+#+begin_example
+error[E0382]: borrow of moved value: `s`
+  --> src/main.rs:4:20
+   |
+2  |     let s = String::from("hello");
+   |         - move occurs because `s` has type `String`
+3  |     let s2 = s;
+   |              - value moved here
+4  |     println!("{}", s);
+   |                    ^ value borrowed here after move
+#+end_example
+
+* 🎯 When to Use What
+
+| Scenario                     | Use                            |
+|------------------------------+--------------------------------|
+| Function doesn't modify data | =&T= (immutable reference)     |
+| Function modifies data       | =&mut T= (mutable reference)   |
+| Function needs ownership     | =T= (owned value)              |
+| Need multiple owners         | =Rc<T>= or =Arc<T>= (Module 7) |
+| Large struct, read-only      | =&T= (avoid cloning)           |
+| Small data (primitives)      | =T= (Copy is cheap)            |
+
+* 💡 Tips for C++ Developers
+
+1. *Start with ownership* - Don't fight the borrow checker, understand it
+2. *Clone sparingly* - Only when you truly need independent copies
+3. *Use references* - Most functions should take =&T= or =&mut T=
+4. *Trust the compiler* - If it compiles, memory safety is guaranteed
+5. *No manual delete* - Memory is automatically freed (like RAII)
+
+* 📚 Module Progress
+
+- [ ] Module 1: Basics and Ownership ← START HERE
+- [ ] Module 2: Borrowing and Lifetimes
+- [ ] Module 3: Structs, Enums, Pattern Matching
+- [ ] Module 4: Error Handling (Result, Option)
+- [ ] Module 5: Traits and Generics
+- [ ] Module 6: Collections and Iterators
+- [ ] Module 7: Concurrency and Smart Pointers
+
+-----
+
+*Remember*: The learning curve is steep initially, but Rust prevents entire classes of bugs that plague C++ codebases!

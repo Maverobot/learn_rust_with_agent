@@ -1,8 +1,9 @@
-# Learning Progress
+#+TITLE: Learning Progress
+#+OPTIONS: toc:nil num:nil
 
 Track your journey learning Rust here. Document insights, challenges, and breakthroughs!
 
-## Progress Overview
+* Progress Overview
 
 - [ ] Module 1: Basics and Ownership
 - [ ] Module 2: Borrowing and Lifetimes
@@ -13,62 +14,63 @@ Track your journey learning Rust here. Document insights, challenges, and breakt
 - [ ] Module 7: Concurrency and Smart Pointers
 - [ ] Robotics Examples Project
 
----
+-----
 
-## Learning Log
+* Learning Log
 
-### Session 1 - [Date: ]
+** Session 1 - [Date: ]
 
-**Topics Covered:**
+*** Topics Covered:
 -
 
-**Key Insights:**
+*** Key Insights:
 -
 
-**Comparison with C++:**
+*** Comparison with C++:
 -
 
-**Questions/Challenges:**
+*** Questions/Challenges:
 -
 
-**Next Steps:**
+*** Next Steps:
 -
 
----
+-----
 
-### Session 2 - [Date: ]
+** Session 2 - [Date: ]
 
-**Topics Covered:**
+*** Topics Covered:
 -
 
-**Key Insights:**
+*** Key Insights:
 -
 
-**Comparison with C++:**
+*** Comparison with C++:
 -
 
-**Questions/Challenges:**
+*** Questions/Challenges:
 -
 
-**Next Steps:**
+*** Next Steps:
 -
 
----
+-----
 
-## Quick Reference Notes
+* Quick Reference Notes
 
-### Things That Surprised Me
+** Things That Surprised Me
 -
 
-### Common Mistakes to Avoid
+** Common Mistakes to Avoid
 -
 
-### Favorite Rust Features
+** Favorite Rust Features
 -
 
-### Rust vs C++ Quick Comparisons
+** Rust vs C++ Quick Comparisons
+
 | Concept            | C++                 | Rust                       |
-|--------------------|---------------------|----------------------------|
+|--------------------+---------------------+----------------------------|
 | Memory Management  | Manual (RAII)       | Ownership + Borrow Checker |
 | Null Pointers      | Can cause crashes   | Option<T> type             |
 | Error Handling     | Exceptions          | Result<T, E> type          |

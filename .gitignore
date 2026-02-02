@@ -19,3 +19,6 @@ Thumbs.db
 \#*\#
 .\#*
 .dir-locals.el
+
+# Markdown (using org files instead)
+*.md

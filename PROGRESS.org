@@ -7,7 +7,7 @@ Track your journey learning Rust here. Document insights, challenges, and breakt
 
 - [X] Module 1: Basics and Ownership
 - [X] Module 2: Borrowing and Lifetimes
-- [ ] Module 3: Structs, Enums, and Pattern Matching
+- [X] Module 3: Structs, Enums, and Pattern Matching
 - [ ] Module 4: Error Handling
 - [ ] Module 5: Traits and Generics
 - [ ] Module 6: Collections and Iterators

@@ -30,7 +30,7 @@ struct Robot {
 fn exercise_1_basic_structs() {
     println!("--- Exercise 1: Basic Structs ---");
 
-    // TODO: Create a Robot instance with:
+    // Create a Robot instance with:
     // - id: 1
     // - name: "Explorer-1"
     // - position: (0.0, 0.0)
@@ -44,11 +44,13 @@ fn exercise_1_basic_structs() {
 
     println!("Robot created: {:?}", robot);
 
-    // TODO: Access fields
+    // Access fields
     println!("Robot name: {}", robot.name);
     println!("Robot position: {:?}", robot.position);
+    println!("Robot active: {}", robot.active);
+    println!("Robot id: {}", robot.id);
 
-    // TODO: Create a second robot using field init shorthand
+    // Create a second robot using field init shorthand
     let id = 2;
     let name = String::from("Scout-2");
     let robot2 = Robot {
@@ -59,16 +61,26 @@ fn exercise_1_basic_structs() {
     };
     println!("Robot 2: {:?}", robot2);
 
-    // TODO: Create a robot using struct update syntax
+    // Create a robot using struct update syntax
+    // Since we specify id and name, only position and active are copied from robot
+    // position and active are Copy types, so robot is still usable!
     let robot3 = Robot {
         id: 3,
         name: String::from("Clone-3"),
-        ..robot // Use robot's other fields (but robot.name was moved!)
+        ..robot // Copies robot.position and robot.active (both Copy types)
     };
-    // Note: robot can't be used anymore because name was moved
+    println!("Original robot still usable: {:?}", robot);
+    println!("Robot 3 (cloned fields): {:?}", robot3);
+
+    // Now let's see what happens when we DON'T specify name:
+    let robot4 = Robot {
+        id: 4,
+        ..robot // This MOVES robot.name (String is not Copy!)
+    };
+    // Now robot can't be used anymore because name was moved
     // Uncomment to see the error:
-    // println!("Original robot: {:?}", robot);
-    println!("Robot 3 (cloned): {:?}", robot3);
+    // println!("Original robot: {:?}", robot);  // ERROR!
+    println!("Robot 4 (with moved name): {:?}", robot4);
 
     println!();
 }

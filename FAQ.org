@@ -1,0 +1,739 @@
+#+TITLE: Rust Learning FAQ
+#+OPTIONS: toc:t num:nil
+
+Frequently asked questions and insights while learning Rust, especially from a C++ perspective.
+
+* Table of Contents :TOC:
+- [[#module-3-structs-enums-and-pattern-matching][Module 3: Structs, Enums, and Pattern Matching]]
+  - [[#structs][Structs]]
+    - [[#q-rust-structs-are-private-by-default---how-about-the-methods][Q: Rust structs are private by default - how about the methods?]]
+    - [[#q-how-to-access-data-in-a-struct-with-unnamed-fields-tuple-structs][Q: How to access data in a struct with unnamed fields (tuple structs)?]]
+  - [[#methods-and-impl-blocks][Methods and impl Blocks]]
+    - [[#q-in-member-functions-when-shall-one-use-self-self-or-mut-self][Q: In member functions, when shall one use ~self~, ~&self~, or ~&mut self~?]]
+    - [[#q-what-does-the-impl-keyword-do][Q: What does the ~impl~ keyword do?]]
+  - [[#enums][Enums]]
+    - [[#q-is-enum-in-rust-like-stdvariant-in-c-but-with-strong-types][Q: Is enum in Rust like ~std::variant~ in C++, but with strong types?]]
+- [[#module-2-borrowing-and-lifetimes][Module 2: Borrowing and Lifetimes]]
+- [[#module-1-basics-and-ownership][Module 1: Basics and Ownership]]
+- [[#general-questions][General Questions]]
+    - [[#q-your-question-here][Q: Your question here?]]
+
+* Module 3: Structs, Enums, and Pattern Matching
+
+** Structs
+
+*** Q: Rust structs are private by default - how about the methods?
+
+*A:* Methods follow the same visibility rules:
+- Methods are *private by default* (just like struct fields)
+- Use ~pub~ keyword to make them public
+- Even if a struct is ~pub~, its methods can still be private
+
+*Example:*
+
+#+begin_src rust
+pub struct Robot {
+    id: u32,           // private field (default)
+    pub name: String,  // public field (explicit)
+}
+
+impl Robot {
+    // Public associated function (constructor)
+    pub fn new(id: u32, name: String) -> Self {
+        Robot { id, name }
+    }
+
+    // Public method - can be called from outside the module
+    pub fn get_id(&self) -> u32 {
+        self.id
+    }
+
+    // Private method - only callable within this module
+    fn internal_check(&self) -> bool {
+        self.id > 0
+    }
+}
+#+end_src
+
+*C++ Comparison:*
+In C++, you use ~public:~, ~private:~, ~protected:~ sections. In Rust, each item needs its own ~pub~ keyword.
+
+#+begin_src cpp
+// C++ equivalent
+class Robot {
+private:
+    uint32_t id;
+
+    // Private method
+    bool internalCheck() const {
+        return id > 0;
+    }
+
+public:
+    std::string name;
+
+    // Public constructor
+    Robot(uint32_t id, std::string name)
+        : id(id), name(std::move(name)) {}
+
+    // Public method
+    uint32_t getId() const {
+        return id;
+    }
+};
+#+end_src
+
+---
+
+*** Q: How to access data in a struct with unnamed fields (tuple structs)?
+
+*A:* Use numeric indices like tuples: ~.0~, ~.1~, ~.2~, etc.
+
+*Example:*
+
+#+begin_src rust
+struct Point(f64, f64);
+struct Color(u8, u8, u8);
+
+let p = Point(10.0, 20.0);
+println!("x: {}, y: {}", p.0, p.1);  // Access with .0 and .1
+
+let red = Color(255, 0, 0);
+println!("RGB({}, {}, {})", red.0, red.1, red.2);
+#+end_src
+
+*When to use tuple structs:*
+- *Newtype pattern:* Create type-safe wrappers
+  #+begin_src rust
+  struct Meters(f64);
+  struct Seconds(f64);
+
+  // Now you can't accidentally mix meters and seconds!
+  fn calculate_speed(distance: Meters, time: Seconds) -> f64 {
+      distance.0 / time.0
+  }
+  #+end_src
+
+- *Simple data containers:* When field names don't add clarity
+  #+begin_src rust
+  struct Point2D(f64, f64);  // x and y are obvious from context
+  #+end_src
+
+*C++ Comparison:*
+Similar to ~std::pair~ or ~std::tuple~, but with a custom type name.
+
+#+begin_src cpp
+// C++ equivalents
+using Point = std::pair<double, double>;  // Less type-safe
+// OR
+struct Point {
+    double x, y;
+    Point(double x, double y) : x(x), y(y) {}
+};
+#+end_src
+
+---
+
+*** Q: What happens with struct update syntax (~..~) when some fields are Copy and others are not?
+
+*A:* Struct update syntax (~..other_struct~) will:
+- **Copy** fields that implement the ~Copy~ trait
+- **Move** fields that don't implement ~Copy~
+
+After the update, you can only use the original struct if:
+- All moved fields were replaced with new values, OR
+- You only access individual Copy fields
+
+*Example:*
+
+#+begin_src rust
+#[derive(Debug, Copy, Clone)]
+struct Point {
+    x: f64,
+    y: f64,
+}
+
+#[derive(Debug)]
+struct Robot {
+    id: u32,              // Copy type
+    name: String,         // NOT Copy - will be moved!
+    position: Point,      // Copy type (we derived Copy)
+    active: bool,         // Copy type
+}
+
+fn main() {
+    let robot1 = Robot {
+        id: 1,
+        name: String::from("Original"),
+        position: Point { x: 0.0, y: 0.0 },
+        active: true,
+    };
+
+    // Case 1: Specify name explicitly - only Copy types used from robot1
+    let robot2 = Robot {
+        id: 2,
+        name: String::from("New"),
+        ..robot1  // Only copies: position (Copy), active (Copy)
+    };
+    
+    // robot1 is still fully usable!
+    println!("{:?}", robot1);  // ✅ Works!
+
+    // Case 2: Don't specify name - name gets MOVED from robot1
+    let robot3 = Robot {
+        id: 3,
+        ..robot1  // MOVES robot1.name, copies position and active
+    };
+    
+    // robot1 can't be used as a whole anymore
+    // println!("{:?}", robot1);  // ❌ Error! name was moved
+    
+    // But you can still access Copy fields individually:
+    println!("{}", robot1.id);        // ✅ Works (Copy)
+    println!("{:?}", robot1.position); // ✅ Works (Copy)
+    println!("{}", robot1.active);    // ✅ Works (Copy)
+    // println!("{}", robot1.name);   // ❌ Error! name was moved
+}
+#+end_src
+
+*Key Rules:*
+1. Struct update syntax (~..struct~) only uses fields you *didn't* explicitly specify
+2. Copy types (like ~u32~, ~bool~, ~f64~, and structs that derive Copy) are copied
+3. Non-Copy types (like ~String~, ~Vec~) are moved
+4. After a move, you can't use the whole struct, but can access individual Copy fields
+
+*Common mistake to watch for:*
+#+begin_src rust
+let robot2 = Robot {
+    id: 2,
+    name: String::from("New"),
+    ..robot1
+};
+// Looking at this, you might think robot1.name was moved,
+// but it wasn't! We specified name explicitly, so only
+// position and active were used from robot1.
+#+end_src
+
+*Gotcha with Point:*
+If Point didn't derive Copy:
+#+begin_src rust
+#[derive(Debug, Clone)]  // No Copy!
+struct Point { x: f64, y: f64 }
+
+// Then Point would be MOVED by struct update syntax
+let robot2 = Robot {
+    id: 2,
+    name: String::from("New"),
+    ..robot1  // Moves robot1.position AND robot1.active (wait, bool is still Copy)
+};
+// robot1.position would be moved even though it's just two f64s!
+#+end_src
+
+*C++ Comparison:*
+C++ doesn't have direct equivalent to struct update syntax. You might use:
+- Copy constructor
+- Assignment operator
+- Designated initializers (C++20) - but no "use other struct's fields" syntax
+
+#+begin_src cpp
+// C++ - no direct equivalent
+Robot robot1{1, "Original", {0.0, 0.0}, true};
+
+// You'd manually copy fields:
+Robot robot2{
+    .id = 2,
+    .name = "New",
+    .position = robot1.position,  // Explicit copy
+    .active = robot1.active       // Explicit copy
+};
+
+// Or use copy constructor and modify:
+Robot robot2 = robot1;  // Copy all fields
+robot2.id = 2;
+robot2.name = "New";
+#+end_src
+
+---
+
+** Methods and impl Blocks
+
+*** Q: In member functions, when shall one use ~self~, ~&self~, or ~&mut self~?
+
+*A:* The choice depends on *what you want to do* with the object:
+
+| Signature    | Meaning              | When to Use                          | Can use object after? |
+|--------------+----------------------+--------------------------------------+-----------------------|
+| ~self~       | Takes ownership      | Transform/destroy/consume the object | ❌ No                 |
+| ~&self~      | Immutable borrow     | Read data, no modifications          | ✅ Yes                |
+| ~&mut self~  | Mutable borrow       | Modify the object                    | ✅ Yes                |
+
+*Detailed Examples:*
+
+#+begin_src rust
+struct Robot {
+    id: u32,
+    name: String,
+    position: (f64, f64),
+    active: bool,
+}
+
+impl Robot {
+    // &self - Just reading, no modifications
+    fn status(&self) -> String {
+        format!("Robot {} at {:?}", self.name, self.position)
+    }
+
+    fn distance_from_origin(&self) -> f64 {
+        let (x, y) = self.position;
+        (x * x + y * y).sqrt()
+    }
+
+    // &mut self - Modifying the robot
+    fn move_to(&mut self, x: f64, y: f64) {
+        self.position = (x, y);  // Modifying self
+    }
+
+    fn set_active(&mut self, active: bool) {
+        self.active = active;
+    }
+
+    // self - Consuming the robot (takes ownership)
+    fn shutdown(self) -> String {
+        self.active = false;  // Can still modify
+        format!("Robot {} shut down", self.name)
+        // self is MOVED/CONSUMED here - can't use robot after calling this!
+    }
+
+    // self - Transform into something else
+    fn into_drone(self) -> Drone {
+        Drone {
+            id: self.id,
+            name: format!("{}-Drone", self.name),
+        }
+    }
+}
+
+struct Drone {
+    id: u32,
+    name: String,
+}
+
+// Usage:
+fn main() {
+    let mut robot = Robot {
+        id: 1,
+        name: String::from("Bot"),
+        position: (0.0, 0.0),
+        active: true,
+    };
+
+    // &self methods - can call multiple times
+    println!("{}", robot.status());
+    println!("{:.2}", robot.distance_from_origin());
+
+    // &mut self methods - need mutable reference
+    robot.move_to(10.0, 20.0);
+    robot.set_active(false);
+
+    // self methods - CONSUMES the robot
+    let message = robot.shutdown();
+    println!("{}", message);
+
+    // ERROR! robot was consumed by shutdown()
+    // println!("{}", robot.status());  // Compile error!
+}
+#+end_src
+
+*C++ Comparison:*
+
+| Rust           | C++ Equivalent                  | Notes                           |
+|----------------+---------------------------------+---------------------------------|
+| ~&self~        | ~void method() const~           | Cannot modify                   |
+| ~&mut self~    | ~void method()~                 | Can modify                      |
+| ~self~         | ~void method() &&~              | Rvalue ref qualifier (rare in C++) |
+
+#+begin_src cpp
+// C++ equivalent
+class Robot {
+public:
+    // const method - like &self
+    std::string status() const {
+        return "Robot " + name;
+    }
+
+    // non-const method - like &mut self
+    void moveTo(double x, double y) {
+        position = {x, y};
+    }
+
+    // rvalue ref qualifier - like self (rare in C++)
+    std::string shutdown() && {
+        active = false;
+        return "Robot shut down";
+    }
+};
+#+end_src
+
+*Rule of thumb:*
+- Default to ~&self~ for reading
+- Use ~&mut self~ when you need to modify
+- Use ~self~ only when you want to *consume* or *transform* the object
+
+---
+
+*** Q: What does the ~impl~ keyword do?
+
+*A:* ~impl~ stands for "implementation" - it defines methods and associated functions for a type.
+
+*Basic Syntax:*
+
+#+begin_src rust
+struct TypeName {
+    // Fields
+}
+
+impl TypeName {
+    // Methods and associated functions
+}
+#+end_src
+
+*Two kinds of functions in ~impl~ blocks:*
+
+1. *Associated Functions* (like static methods in C++)
+   - No ~self~ parameter
+   - Called with ~TypeName::function_name()~
+   - Often used for constructors
+
+2. *Methods*
+   - Take ~self~, ~&self~, or ~&mut self~
+   - Called with ~instance.method_name()~
+   - Operate on specific instances
+
+*Example:*
+
+#+begin_src rust
+struct Robot {
+    id: u32,
+    name: String,
+}
+
+impl Robot {
+    // Associated function (no self) - like static method
+    // Called as: Robot::new(1, "Bot")
+    fn new(id: u32, name: String) -> Self {
+        Robot { id, name }
+    }
+
+    // Another associated function
+    fn default() -> Self {
+        Robot {
+            id: 0,
+            name: String::from("Default"),
+        }
+    }
+
+    // Method (takes &self)
+    // Called as: robot.get_name()
+    fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    // Method (takes &mut self)
+    // Called as: robot.set_name("NewName")
+    fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+}
+
+// Usage:
+fn main() {
+    // Call associated functions with ::
+    let mut robot = Robot::new(1, String::from("Alpha"));
+    let default_robot = Robot::default();
+
+    // Call methods with .
+    println!("Name: {}", robot.get_name());
+    robot.set_name(String::from("Beta"));
+}
+#+end_src
+
+*Multiple impl blocks:*
+You can have multiple ~impl~ blocks for the same type (useful for organization):
+
+#+begin_src rust
+impl Robot {
+    // Constructor
+    fn new(id: u32, name: String) -> Self {
+        Robot { id, name }
+    }
+}
+
+impl Robot {
+    // Movement methods
+    fn move_forward(&mut self) { /* ... */ }
+    fn turn(&mut self, angle: f64) { /* ... */ }
+}
+
+impl Robot {
+    // Sensor methods
+    fn read_sensors(&self) -> SensorData { /* ... */ }
+}
+#+end_src
+
+*C++ Comparison:*
+
+#+begin_src cpp
+// C++ - methods defined inside class or outside
+class Robot {
+private:
+    uint32_t id;
+    std::string name;
+
+public:
+    // Constructor (like associated function)
+    Robot(uint32_t id, std::string name)
+        : id(id), name(std::move(name)) {}
+
+    // Static method (like associated function)
+    static Robot defaultRobot() {
+        return Robot(0, "Default");
+    }
+
+    // Regular methods
+    const std::string& getName() const {
+        return name;
+    }
+
+    void setName(std::string name) {
+        this->name = std::move(name);
+    }
+};
+
+// Or define outside the class
+std::string Robot::getName() const {
+    return name;
+}
+#+end_src
+
+*Key differences from C++:*
+- Rust separates data (~struct~) from behavior (~impl~)
+- C++ combines them in ~class~ definitions
+- Rust's approach allows multiple ~impl~ blocks (better code organization)
+- Rust has no ~this~ pointer - use ~self~ instead
+
+---
+
+** Enums
+
+*** Q: Is enum in Rust like ~std::variant~ in C++, but with strong types?
+
+*A:* Yes, but Rust enums are *significantly more powerful* and ergonomic!
+
+*Similarities with ~std::variant~:*
+- ✅ Can hold different types
+- ✅ Only one variant active at a time
+- ✅ Type-safe
+- ✅ No runtime overhead (compared to inheritance)
+
+*Rust advantages over ~std::variant~:*
+1. *Named variants* - Each variant has a meaningful name
+2. *Built-in pattern matching* - No need for ~std::visit~
+3. *Exhaustiveness checking* - Compiler ensures you handle all cases
+4. *Flexible data per variant* - Each variant can have:
+   - No data: ~None~
+   - Tuple data: ~Some(T)~
+   - Struct data: ~Error { code: u32, msg: String }~
+5. *Cleaner syntax* - Much more ergonomic
+
+*Side-by-side comparison:*
+
+#+begin_src rust
+// Rust enum
+enum SensorReading {
+    Temperature(f64),
+    Pressure(f64),
+    GPS { lat: f64, lon: f64 },
+    Error { code: u32, message: String },
+}
+
+// Using it
+let reading = SensorReading::Temperature(23.5);
+
+match reading {
+    SensorReading::Temperature(t) => println!("Temp: {}°C", t),
+    SensorReading::Pressure(p) => println!("Pressure: {} hPa", p),
+    SensorReading::GPS { lat, lon } => println!("GPS: {}, {}", lat, lon),
+    SensorReading::Error { code, message } => {
+        eprintln!("Error {}: {}", code, message);
+    }
+}
+// Compiler ensures you handle ALL cases!
+#+end_src
+
+#+begin_src cpp
+// C++ with std::variant (closest equivalent)
+using SensorReading = std::variant<
+    double,  // Temperature - but no name!
+    double,  // Pressure - wait, same type as Temperature!
+    std::pair<double, double>,  // GPS - anonymous
+    std::pair<uint32_t, std::string>  // Error - anonymous
+>;
+
+// Using it (much more verbose!)
+SensorReading reading = 23.5;  // Is this temp or pressure?
+
+std::visit([](auto&& value) {
+    using T = std::decay_t<decltype(value)>;
+    if constexpr (std::is_same_v<T, double>) {
+        // Wait, is this temp or pressure? Can't tell!
+        std::cout << "Value: " << value << "\n";
+    } else if constexpr (std::is_same_v<T, std::pair<double, double>>) {
+        std::cout << "GPS: " << value.first << ", " << value.second << "\n";
+    }
+    // ... more verbose type checking
+}, reading);
+#+end_src
+
+*Better C++ approach (but still more verbose):*
+
+#+begin_src cpp
+// C++ with custom tagged union (more similar to Rust)
+struct Temperature { double value; };
+struct Pressure { double value; };
+struct GPS { double lat, lon; };
+struct Error { uint32_t code; std::string message; };
+
+using SensorReading = std::variant<Temperature, Pressure, GPS, Error>;
+
+// Now with named types
+SensorReading reading = Temperature{23.5};
+
+std::visit([](auto&& value) {
+    using T = std::decay_t<decltype(value)>;
+    if constexpr (std::is_same_v<T, Temperature>) {
+        std::cout << "Temp: " << value.value << "°C\n";
+    } else if constexpr (std::is_same_v<T, Pressure>) {
+        std::cout << "Pressure: " << value.value << " hPa\n";
+    } else if constexpr (std::is_same_v<T, GPS>) {
+        std::cout << "GPS: " << value.lat << ", " << value.lon << "\n";
+    } else if constexpr (std::is_same_v<T, Error>) {
+        std::cout << "Error " << value.code << ": " << value.message << "\n";
+    }
+}, reading);
+#+end_src
+
+*Key insight:*
+Rust enums are like ~std::variant~ but with:
+- Mandatory named variants (not anonymous types)
+- First-class pattern matching support
+- Compiler-enforced exhaustiveness checking
+- Much cleaner syntax
+
+*When Rust enums replace C++ patterns:*
+
+| C++ Pattern                | Rust Equivalent      | Rust Advantage                       |
+|----------------------------+----------------------+--------------------------------------|
+| ~std::variant~             | ~enum~               | Named variants, pattern matching     |
+| Inheritance/Virtual funcs  | ~enum~ + ~match~     | No vtable overhead, exhaustive       |
+| ~std::optional<T>~         | ~Option<T>~          | Built-in, no null pointers           |
+| Exception handling         | ~Result<T, E>~       | Explicit errors, no hidden control flow |
+| Tagged union (unsafe)      | ~enum~               | Type-safe, compiler-checked          |
+
+*Example - Replacing inheritance:*
+
+#+begin_src cpp
+// C++ with inheritance (runtime polymorphism)
+class Shape {
+public:
+    virtual ~Shape() = default;
+    virtual double area() const = 0;  // Virtual function
+};
+
+class Circle : public Shape {
+    double radius;
+public:
+    Circle(double r) : radius(r) {}
+    double area() const override { return 3.14159 * radius * radius; }
+};
+
+class Rectangle : public Shape {
+    double width, height;
+public:
+    Rectangle(double w, double h) : width(w), height(h) {}
+    double area() const override { return width * height; }
+};
+
+// Using polymorphism (vtable overhead)
+std::unique_ptr<Shape> shape = std::make_unique<Circle>(5.0);
+double a = shape->area();  // Virtual function call
+#+end_src
+
+#+begin_src rust
+// Rust with enum (compile-time dispatch, no vtable!)
+enum Shape {
+    Circle { radius: f64 },
+    Rectangle { width: f64, height: f64 },
+    Triangle { base: f64, height: f64 },
+}
+
+impl Shape {
+    fn area(&self) -> f64 {
+        match self {
+            Shape::Circle { radius } => 3.14159 * radius * radius,
+            Shape::Rectangle { width, height } => width * height,
+            Shape::Triangle { base, height } => 0.5 * base * height,
+            // Compiler error if you forget a case!
+        }
+    }
+}
+
+// Using it (no vtable, direct dispatch)
+let shape = Shape::Circle { radius: 5.0 };
+let a = shape.area();  // Direct call, no indirection!
+#+end_src
+
+*Summary:*
+Rust enums are like ~std::variant~ but designed from the ground up with pattern matching, named variants, and type safety as first-class features. They're one of Rust's most powerful features and replace many C++ patterns (variant, optional, inheritance, tagged unions).
+
+---
+
+* Module 2: Borrowing and Lifetimes
+
+/To be added as you continue learning.../
+
+---
+
+* Module 1: Basics and Ownership
+
+/To be added as you continue learning.../
+
+---
+
+* General Questions
+
+/Add cross-cutting questions here that span multiple modules.../
+
+---
+
+#+BEGIN_COMMENT
+This FAQ is a living document. Add your questions and insights as you learn!
+
+Format for new entries:
+*** Q: Your question here?
+
+*A:* Your answer...
+
+*Example:*
+
+#+begin_src rust
+// Code example
+#+end_src
+
+*C++ Comparison:*
+
+#+begin_src cpp
+// C++ equivalent
+#+end_src
+
+---
+#+END_COMMENT

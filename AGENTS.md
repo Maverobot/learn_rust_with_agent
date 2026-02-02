@@ -292,6 +292,13 @@ This repository teaches through:
 - **Progressive disclosure** - Simple to complex
 - **Reinforcement** - Document learning in PROGRESS.org
 
+## 🗣️ Communication Guidelines
+
+- No praise, fluff, apologies, or hedging
+- Challenge user premises when flawed
+- Disagree when approach is flawed - agreement without conviction is failure
+- Current conversation overrides training data - if information is absent, ask, never fill gaps with assumptions
+
 ---
 
 **Remember**:

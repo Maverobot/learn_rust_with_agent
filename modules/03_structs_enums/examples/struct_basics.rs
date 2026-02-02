@@ -21,7 +21,7 @@ fn main() {
 // Basic Structs
 // ============================================================================
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct Point {
     x: f64,
     y: f64,
@@ -126,21 +126,34 @@ fn struct_update_syntax() {
     println!("Robot 1: {:?}", robot1);
 
     // Create a new robot with some fields from robot1
-    // Note: This moves robot1.name, so robot1 can't be fully used after
+    // Since we specify id and name, only location and battery_level are used from robot1
+    // location (Point with f64s) and battery_level (u8) are Copy types!
     let robot2 = Robot {
         id: 2,
         name: String::from("Modified"),
-        ..robot1 // Use robot1's location and battery_level
+        ..robot1 // Copies robot1's location and battery_level (both Copy)
     };
 
     println!("Robot 2: {:?}", robot2);
 
-    // robot1 can't be used anymore because name was moved
-    // Uncomment to see the error:
-    // println!("Robot 1: {:?}", robot1);
+    // robot1 is still usable because we only copied Copy types
+    println!("Robot 1 still usable: {:?}", robot1);
 
-    // But we can still access Copy fields
+    // Now let's create robot3 WITHOUT specifying name - this MOVES robot1.name
+    let robot3 = Robot {
+        id: 3,
+        ..robot1 // This MOVES robot1.name (String is not Copy!)
+    };
+
+    println!("Robot 3 (with moved name): {:?}", robot3);
+
+    // Now robot1 can't be used anymore because name was moved
+    // Uncomment to see the error:
+    // println!("Robot 1: {:?}", robot1);  // ERROR!
+
+    // But we can still access Copy fields individually
     println!("Robot 1's battery level: {}", robot1.battery_level);
+    println!("Robot 1's location: {:?}", robot1.location);
 
     println!();
 }

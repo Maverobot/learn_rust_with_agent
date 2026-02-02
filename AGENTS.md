@@ -1,11 +1,10 @@
-#+TITLE: Agent Guidelines for Rust Learning Repository
-#+OPTIONS: toc:2 num:nil
+# Agent Guidelines for Rust Learning Repository
 
 This repository is a structured Rust learning curriculum designed for C++ engineers transitioning to Rust. Follow these guidelines when contributing code or creating new modules.
 
-* 🏗️ Repository Structure
+## 🏗️ Repository Structure
 
-#+begin_example
+```
 learn_rust_with_agent/
 ├── Cargo.toml                         # Workspace root
 ├── modules/                           # Learning modules (numbered)
@@ -16,12 +15,12 @@ learn_rust_with_agent/
 │   │   └── examples/*.rs             # Runnable examples
 │   └── 02_borrowing_lifetimes/       # Future modules...
 └── examples/                          # Cross-module examples (future)
-#+end_example
+```
 
-* 🔧 Build, Lint, and Test Commands
+## 🔧 Build, Lint, and Test Commands
 
-** Building
-#+begin_src bash
+### Building
+```bash
 # Build entire workspace
 cargo build
 
@@ -31,10 +30,10 @@ cargo build -p basics_ownership
 # Check without building (faster)
 cargo check
 cargo check --workspace
-#+end_src
+```
 
-** Running Code
-#+begin_src bash
+### Running Code
+```bash
 # Run a module's main.rs
 cargo run -p basics_ownership
 
@@ -45,10 +44,10 @@ cargo run -p basics_ownership --example ownership_basics
 cd modules/01_basics_ownership
 cargo run
 cargo run --example ownership_basics
-#+end_src
+```
 
-** Testing
-#+begin_src bash
+### Testing
+```bash
 # Run all tests in workspace
 cargo test --workspace
 
@@ -66,10 +65,10 @@ cargo test -- --nocapture
 
 # Run single test with output
 cargo test test_copy_types -- --nocapture
-#+end_src
+```
 
-** Linting and Formatting
-#+begin_src bash
+### Linting and Formatting
+```bash
 # Format all code (REQUIRED before commits)
 cargo fmt --all
 
@@ -81,34 +80,34 @@ cargo clippy --all-targets --workspace
 
 # Clippy with all warnings
 cargo clippy --all-targets --workspace -- -D warnings
-#+end_src
+```
 
-** Documentation
-#+begin_src bash
+### Documentation
+```bash
 # Generate and open documentation
 cargo doc --open
 
 # Check documentation examples
 cargo test --doc
-#+end_src
+```
 
-* 📝 Code Style Guidelines
+## 📝 Code Style Guidelines
 
-** File Headers
-Every =.rs= file should have a descriptive header:
-#+begin_src rust
+### File Headers
+Every `.rs` file should have a descriptive header:
+```rust
 // Module 1: Basics and Ownership
 // Interactive exercises - uncomment sections and fix the code!
-#+end_src
+```
 
 For examples:
-#+begin_src rust
+```rust
 // Example: Ownership Basics
 // Run with: cargo run --example ownership_basics
-#+end_src
+```
 
-** Imports
-#+begin_src rust
+### Imports
+```rust
 // Standard library first
 use std::collections::HashMap;
 use std::fmt;
@@ -118,16 +117,16 @@ use std::fmt;
 
 // Local/super imports last
 use super::*;
-#+end_src
+```
 
-** Formatting
-- *Indentation*: 4 spaces (enforced by =cargo fmt=)
-- *Line length*: 100 characters (rustfmt default)
-- *Trailing commas*: Use them in multi-line expressions
-- *Let rustfmt do the work*: Always run =cargo fmt=
+### Formatting
+- **Indentation**: 4 spaces (enforced by `cargo fmt`)
+- **Line length**: 100 characters (rustfmt default)
+- **Trailing commas**: Use them in multi-line expressions
+- **Let rustfmt do the work**: Always run `cargo fmt`
 
-** Naming Conventions
-#+begin_src rust
+### Naming Conventions
+```rust
 // Functions and variables: snake_case
 fn calculate_velocity() {}
 let sensor_data = vec![1, 2, 3];
@@ -143,18 +142,18 @@ const DEFAULT_TIMEOUT: u64 = 5000;
 
 // Lifetimes: short, descriptive lowercase
 fn process<'a, 'b>(data: &'a str, buffer: &'b mut String) {}
-#+end_src
+```
 
-** Comments
-#+begin_src rust
+### Comments
+```rust
 // Use // for single-line comments
 // Explain WHY, not WHAT (code should be self-documenting)
 
 /// Use /// for documentation comments
-///
+/// 
 /// # Arguments
 /// * `data` - The sensor data to process
-///
+/// 
 /// # Returns
 /// Processed data as a Vec<f64>
 fn process_data(data: &[f64]) -> Vec<f64> {
@@ -165,10 +164,10 @@ fn process_data(data: &[f64]) -> Vec<f64> {
 // In C++, after std::move(), the moved-from object is still "valid"
 // but in an unspecified state. Rust is stricter - you simply cannot
 // use s1 anymore after it's been moved.
-#+end_src
+```
 
-** Error Handling
-#+begin_src rust
+### Error Handling
+```rust
 // In early modules: Use simple unwrap() with clear comments
 let data = read_file("data.txt").unwrap();  // OK for examples
 
@@ -185,10 +184,10 @@ fn parse_sensor_data(input: &str) -> Result<SensorData, ParseError> {
 fn find_robot(id: u32) -> Option<Robot> {
     // ...
 }
-#+end_src
+```
 
-** Type Annotations
-#+begin_src rust
+### Type Annotations
+```rust
 // Explicit types when it improves clarity
 let count: usize = data.len();
 let velocity: f64 = 5.0;
@@ -201,10 +200,10 @@ let numbers = vec![1, 2, 3];    // Type is obvious
 fn calculate_distance(p1: &Point, p2: &Point) -> f64 {
     // ...
 }
-#+end_src
+```
 
-** Testing
-#+begin_src rust
+### Testing
+```rust
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -213,10 +212,10 @@ mod tests {
     fn test_descriptive_name() {
         // Arrange
         let input = 42;
-
+        
         // Act
         let result = process(input);
-
+        
         // Assert
         assert_eq!(result, expected);
     }
@@ -227,20 +226,20 @@ mod tests {
         // Test panic conditions
     }
 }
-#+end_src
+```
 
-* 🎓 Educational Guidelines
+## 🎓 Educational Guidelines
 
-** Module Structure
+### Module Structure
 Each module should include:
-1. *README.org* - Concepts, C++ comparisons, learning objectives
-2. *src/main.rs* - Interactive exercises with commented-out errors
-3. *examples/*.rs* - Working demos showing concepts in action
-4. *Tests* - Verify exercises work correctly
+1. **README.org** - Concepts, C++ comparisons, learning objectives
+2. **src/main.rs** - Interactive exercises with commented-out errors
+3. **examples/*.rs** - Working demos showing concepts in action
+4. **Tests** - Verify exercises work correctly
 
-** C++ Comparisons
+### C++ Comparisons
 Always provide C++ context for concepts:
-#+begin_src rust
+```rust
 // C++ equivalent comments
 /*
 C++ Equivalent:
@@ -248,54 +247,54 @@ C++ Equivalent:
 std::unique_ptr<std::string> ptr = std::make_unique<std::string>("hello");
 auto ptr2 = std::move(ptr);  // Explicit move
 // ptr is now in valid but unspecified state
-,*/
-#+end_src
+*/
+```
 
-** Intentional Errors
+### Intentional Errors
 Use commented-out code to demonstrate compiler errors:
-#+begin_src rust
+```rust
 // This will cause a compilation error - uncomment to see:
 // println!("s1 = {}", s1);  // Error! s1 no longer valid
-#+end_src
+```
 
-** Progressive Complexity
+### Progressive Complexity
 - Start simple, build gradually
 - Reference future modules for advanced topics
 - Reinforce previous concepts
 
-* 🚫 Common Mistakes to Avoid
+## 🚫 Common Mistakes to Avoid
 
-1. *Don't use =clone()= unnecessarily* - Prefer borrowing (teach this!)
-2. *Don't ignore Clippy warnings* - They teach best practices
-3. *Don't use =unwrap()= in production code* - Only in examples with comments
-4. *Don't fight the borrow checker* - Understand ownership first
-5. *Don't add dependencies without reason* - Keep examples self-contained
+1. **Don't use `clone()` unnecessarily** - Prefer borrowing (teach this!)
+2. **Don't ignore Clippy warnings** - They teach best practices
+3. **Don't use `unwrap()` in production code** - Only in examples with comments
+4. **Don't fight the borrow checker** - Understand ownership first
+5. **Don't add dependencies without reason** - Keep examples self-contained
 
-* ✅ Checklist for New Modules
+## ✅ Checklist for New Modules
 
-- [ ] Add module to workspace =Cargo.toml= members list
-- [ ] Create =README.org= with learning objectives and C++ comparisons
-- [ ] Write =src/main.rs= with interactive exercises
-- [ ] Add at least 2 runnable examples in =examples/=
-- [ ] Include tests in =src/main.rs=
-- [ ] Run =cargo fmt --all=
-- [ ] Run =cargo clippy --workspace=
-- [ ] Run =cargo test --workspace=
-- [ ] Verify all examples run: =cargo run --example <name>=
-- [ ] Update main =README.org= with module link
+- [ ] Add module to workspace `Cargo.toml` members list
+- [ ] Create `README.org` with learning objectives and C++ comparisons
+- [ ] Write `src/main.rs` with interactive exercises
+- [ ] Add at least 2 runnable examples in `examples/`
+- [ ] Include tests in `src/main.rs`
+- [ ] Run `cargo fmt --all`
+- [ ] Run `cargo clippy --workspace`
+- [ ] Run `cargo test --workspace`
+- [ ] Verify all examples run: `cargo run --example <name>`
+- [ ] Update main `README.org` with module link
 
-* 🎯 Learning Philosophy
+## 🎯 Learning Philosophy
 
 This repository teaches through:
-- *Hands-on practice* - Runnable, modifiable code
-- *Comparative learning* - Leverage C++ knowledge
-- *Failing forward* - Learn from compiler errors
-- *Progressive disclosure* - Simple to complex
-- *Reinforcement* - Document learning in PROGRESS.org
+- **Hands-on practice** - Runnable, modifiable code
+- **Comparative learning** - Leverage C++ knowledge
+- **Failing forward** - Learn from compiler errors
+- **Progressive disclosure** - Simple to complex
+- **Reinforcement** - Document learning in PROGRESS.org
 
------
+---
 
-*Remember*:
+**Remember**:
 - Code should be educational, clear, and idiomatic. When in doubt, prioritize teaching value over brevity.
 - ALWAYS USE THE QUESTION TOOL IF YOU NEED TO ASK USER.
 - USE THE QUESTION TOOL TO ASK FOR FEEDBACK OR NEXT STEPS WHENEVER THE CURRENT TASK IS COMPLETE OR BLOCKED.

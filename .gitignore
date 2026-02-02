@@ -20,5 +20,6 @@ Thumbs.db
 .\#*
 .dir-locals.el
 
-# Markdown (using org files instead)
+# Markdown (using org files for docs, except AGENTS.md for AI agents)
 *.md
+!AGENTS.md

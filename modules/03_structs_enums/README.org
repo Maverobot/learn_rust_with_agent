@@ -1,0 +1,458 @@
+#+TITLE: Module 3: Structs, Enums, and Pattern Matching
+#+OPTIONS: toc:nil num:nil
+
+* Learning Objectives
+
+By the end of this module, you will understand:
+- How to define and use structs (similar to C++ structs/classes)
+- The power of Rust's enums (far more capable than C++ enums!)
+- Pattern matching with ~match~ expressions
+- The ~Option~ and ~Result~ types (Rust's solution to null pointers and exceptions)
+- How to implement methods on structs and enums
+- Tuple structs and unit-like structs
+
+* Key Concepts
+
+** 1. Structs
+
+Structs in Rust are similar to C++ structs, but with some differences:
+
+*** Basic Struct Syntax
+
+#+begin_src rust
+struct Robot {
+    id: u32,
+    name: String,
+    position: (f64, f64),
+    active: bool,
+}
+
+// Creating an instance
+let robot = Robot {
+    id: 1,
+    name: String::from("Explorer-1"),
+    position: (0.0, 0.0),
+    active: true,
+};
+#+end_src
+
+*** C++ Comparison
+
+#+begin_src cpp
+// C++ equivalent
+struct Robot {
+    uint32_t id;
+    std::string name;
+    std::pair<double, double> position;
+    bool active;
+    
+    // C++ needs explicit constructor
+    Robot(uint32_t id, std::string name, 
+          std::pair<double, double> pos, bool active)
+        : id(id), name(std::move(name)), position(pos), active(active) {}
+};
+
+// Creating instance
+Robot robot(1, "Explorer-1", {0.0, 0.0}, true);
+#+end_src
+
+*Key Differences:*
+- Rust uses named field initialization (no constructor needed for basic cases)
+- All fields must be initialized (no default values unless you define them)
+- Rust structs are private by default (need ~pub~ for public access)
+
+*** Tuple Structs
+
+Structs with unnamed fields (useful for newtypes):
+
+#+begin_src rust
+struct Point(f64, f64);
+struct Meters(f64);
+
+let origin = Point(0.0, 0.0);
+let distance = Meters(100.0);
+#+end_src
+
+** 2. Methods and Associated Functions
+
+Use ~impl~ blocks to add methods (like C++ member functions):
+
+#+begin_src rust
+impl Robot {
+    // Associated function (like a static method in C++)
+    fn new(id: u32, name: String) -> Robot {
+        Robot {
+            id,
+            name,
+            position: (0.0, 0.0),
+            active: true,
+        }
+    }
+    
+    // Method (takes &self)
+    fn distance_from_origin(&self) -> f64 {
+        let (x, y) = self.position;
+        (x * x + y * y).sqrt()
+    }
+    
+    // Mutable method (takes &mut self)
+    fn move_to(&mut self, x: f64, y: f64) {
+        self.position = (x, y);
+    }
+    
+    // Consuming method (takes self)
+    fn deactivate(self) {
+        println!("Robot {} deactivated", self.name);
+        // self is consumed here
+    }
+}
+#+end_src
+
+*** C++ Comparison
+
+#+begin_src cpp
+class Robot {
+private:
+    uint32_t id;
+    std::string name;
+    std::pair<double, double> position;
+    bool active;
+
+public:
+    // Constructor
+    Robot(uint32_t id, std::string name)
+        : id(id), name(std::move(name)), position{0.0, 0.0}, active(true) {}
+    
+    // Const method (like &self in Rust)
+    double distanceFromOrigin() const {
+        auto [x, y] = position;
+        return std::sqrt(x * x + y * y);
+    }
+    
+    // Non-const method (like &mut self in Rust)
+    void moveTo(double x, double y) {
+        position = {x, y};
+    }
+    
+    // Consumes the object (rare in C++, common in Rust)
+    void deactivate() && {  // Rvalue ref qualifier
+        std::cout << "Robot " << name << " deactivated\n";
+    }
+};
+#+end_src
+
+** 3. Enums - Rust's Superpower!
+
+Rust enums are MUCH more powerful than C++ enums. They can:
+- Hold data of different types for each variant
+- Be used with pattern matching
+- Replace many uses of inheritance/polymorphism from C++
+
+*** Basic Enum
+
+#+begin_src rust
+enum SensorType {
+    Camera,
+    Lidar,
+    GPS,
+    IMU,
+}
+#+end_src
+
+*** Enums with Data
+
+This is where Rust shines! Each variant can hold different data:
+
+#+begin_src rust
+enum SensorReading {
+    Camera(String),              // Holds a String
+    Lidar(Vec<f64>),            // Holds a vector of distances
+    GPS(f64, f64),              // Holds latitude and longitude
+    IMU { roll: f64, pitch: f64, yaw: f64 },  // Named fields!
+    Error(String),              // Error message
+}
+
+// Create instances
+let reading1 = SensorReading::Camera(String::from("image.png"));
+let reading2 = SensorReading::GPS(37.7749, -122.4194);
+let reading3 = SensorReading::IMU { roll: 0.0, pitch: 0.0, yaw: 90.0 };
+#+end_src
+
+*** C++ Comparison
+
+In C++, you'd typically use:
+- ~std::variant~ (similar but more verbose)
+- Inheritance with virtual functions (runtime overhead)
+- Tagged unions (unsafe)
+
+#+begin_src cpp
+// C++ with std::variant
+using SensorReading = std::variant<
+    std::string,              // Camera
+    std::vector<double>,      // Lidar
+    std::pair<double, double>, // GPS
+    // ... but this loses type information!
+>;
+
+// OR with inheritance (runtime polymorphism)
+class SensorReading {
+public:
+    virtual ~SensorReading() = default;
+    virtual void process() = 0;
+};
+
+class CameraReading : public SensorReading { /*...*/ };
+class LidarReading : public SensorReading { /*...*/ };
+// etc...
+#+end_src
+
+*Rust's advantages:*
+- No virtual function call overhead
+- Compile-time type checking
+- Exhaustive pattern matching (compiler ensures you handle all cases)
+- No null pointers!
+
+** 4. Pattern Matching
+
+~match~ is like C++ ~switch~ on steroids!
+
+#+begin_src rust
+fn process_reading(reading: SensorReading) {
+    match reading {
+        SensorReading::Camera(filename) => {
+            println!("Processing camera image: {}", filename);
+        }
+        SensorReading::Lidar(distances) => {
+            println!("Got {} distance readings", distances.len());
+        }
+        SensorReading::GPS(lat, lon) => {
+            println!("Position: {}, {}", lat, lon);
+        }
+        SensorReading::IMU { roll, pitch, yaw } => {
+            println!("Orientation: roll={}, pitch={}, yaw={}", roll, pitch, yaw);
+        }
+        SensorReading::Error(msg) => {
+            eprintln!("Sensor error: {}", msg);
+        }
+    }
+}
+#+end_src
+
+*Key features:*
+- Exhaustive: Must handle all variants (compiler enforces this!)
+- Destructuring: Extract data from variants
+- Guards: Add conditions with ~if~
+- Wildcards: Use ~_~ for "don't care"
+
+*** Match Guards and Patterns
+
+#+begin_src rust
+fn classify_distance(distance: f64) -> &'static str {
+    match distance {
+        d if d < 0.0 => "Invalid",
+        0.0..=1.0 => "Very close",
+        1.0..=5.0 => "Close",
+        5.0..=10.0 => "Medium",
+        _ => "Far",  // Catch-all
+    }
+}
+#+end_src
+
+** 5. Option<T> - No More Null Pointers!
+
+Rust has no null pointers. Instead, use ~Option<T>~:
+
+#+begin_src rust
+enum Option<T> {
+    Some(T),
+    None,
+}
+
+fn find_robot(id: u32) -> Option<Robot> {
+    // Returns Some(robot) if found, None otherwise
+    if id == 1 {
+        Some(Robot::new(1, String::from("Explorer-1")))
+    } else {
+        None
+    }
+}
+
+// Using the result
+match find_robot(1) {
+    Some(robot) => println!("Found robot: {}", robot.name),
+    None => println!("Robot not found"),
+}
+
+// Or use if let for single case
+if let Some(robot) = find_robot(1) {
+    println!("Found robot: {}", robot.name);
+}
+#+end_src
+
+*** C++ Comparison
+
+#+begin_src cpp
+// C++ approaches:
+// 1. Raw pointer (dangerous!)
+Robot* findRobot(uint32_t id) {
+    if (id == 1) {
+        return new Robot(1, "Explorer-1");  // Who deletes this?
+    }
+    return nullptr;  // Null pointer exception waiting to happen!
+}
+
+// 2. std::optional (C++17, similar to Rust's Option)
+std::optional<Robot> findRobot(uint32_t id) {
+    if (id == 1) {
+        return Robot(1, "Explorer-1");
+    }
+    return std::nullopt;
+}
+
+// Usage
+if (auto robot = findRobot(1)) {
+    std::cout << "Found: " << robot->name << "\n";
+}
+#+end_src
+
+** 6. Result<T, E> - Error Handling Without Exceptions
+
+~Result~ is for operations that can fail:
+
+#+begin_src rust
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+fn read_sensor(id: u32) -> Result<f64, String> {
+    if id > 0 && id < 10 {
+        Ok(42.0)  // Success
+    } else {
+        Err(String::from("Invalid sensor ID"))  // Error
+    }
+}
+
+// Using Result
+match read_sensor(5) {
+    Ok(value) => println!("Sensor reading: {}", value),
+    Err(e) => eprintln!("Error: {}", e),
+}
+
+// Or propagate with ?
+fn process() -> Result<(), String> {
+    let value = read_sensor(5)?;  // Returns early if Err
+    println!("Got value: {}", value);
+    Ok(())
+}
+#+end_src
+
+* Common Patterns
+
+** The Builder Pattern
+
+#+begin_src rust
+struct RobotBuilder {
+    id: u32,
+    name: String,
+    position: Option<(f64, f64)>,
+    active: bool,
+}
+
+impl RobotBuilder {
+    fn new(id: u32, name: String) -> Self {
+        RobotBuilder {
+            id,
+            name,
+            position: None,
+            active: true,
+        }
+    }
+    
+    fn position(mut self, x: f64, y: f64) -> Self {
+        self.position = Some((x, y));
+        self
+    }
+    
+    fn inactive(mut self) -> Self {
+        self.active = false;
+        self
+    }
+    
+    fn build(self) -> Robot {
+        Robot {
+            id: self.id,
+            name: self.name,
+            position: self.position.unwrap_or((0.0, 0.0)),
+            active: self.active,
+        }
+    }
+}
+
+// Usage
+let robot = RobotBuilder::new(1, String::from("Explorer"))
+    .position(10.0, 20.0)
+    .build();
+#+end_src
+
+** Newtype Pattern
+
+Use tuple structs to create type-safe wrappers:
+
+#+begin_src rust
+struct Meters(f64);
+struct Seconds(f64);
+
+// Now you can't accidentally mix them up!
+fn calculate_speed(distance: Meters, time: Seconds) -> f64 {
+    distance.0 / time.0
+}
+#+end_src
+
+* Quick Reference
+
+| Concept          | Syntax                              | C++ Equivalent           |
+|------------------+-------------------------------------+--------------------------|
+| Struct           | ~struct Point { x: f64, y: f64 }~   | ~struct Point { ... }~   |
+| Tuple Struct     | ~struct Point(f64, f64)~            | ~std::pair~, tuple       |
+| Enum             | ~enum Color { Red, Green, Blue }~   | ~enum class~             |
+| Enum with Data   | ~enum Option<T> { Some(T), None }~  | ~std::variant~, inheritance |
+| Match            | ~match x { ... }~                   | ~switch~, ~std::visit~   |
+| Option           | ~Option<T>~                         | ~std::optional<T>~       |
+| Result           | ~Result<T, E>~                      | Exceptions, ~std::expected~ (C++23) |
+| Method           | ~fn method(&self)~                  | ~void method() const~    |
+| Mutable Method   | ~fn method(&mut self)~              | ~void method()~          |
+
+* Exercises
+
+Work through the exercises in ~src/main.rs~ to practice:
+1. Defining and using structs
+2. Implementing methods
+3. Creating enums with data
+4. Pattern matching
+5. Using Option and Result
+
+* Examples
+
+Run the examples to see these concepts in action:
+
+#+begin_src bash
+# Basic struct usage
+cargo run --example struct_basics
+
+# Enum and pattern matching
+cargo run --example enum_patterns
+
+# Option and Result handling
+cargo run --example option_result
+#+end_src
+
+* Further Reading
+
+- The Rust Book: Chapter 5 (Structs), Chapter 6 (Enums and Pattern Matching)
+- Rust by Example: Enums and Pattern Matching
+- Understanding pattern matching: https://doc.rust-lang.org/book/ch18-00-patterns.html
+
+---
+
+*Next Module*: Error Handling - Deep dive into Result, custom errors, and the ~?~ operator

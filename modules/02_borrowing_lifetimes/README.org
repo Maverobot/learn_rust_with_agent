@@ -251,7 +251,7 @@ Work through the exercises in =src/main.rs= by uncommenting sections and fixing 
 *A*: Those come in Module 7! They're for cases where single ownership doesn't work, similar to =std::shared_ptr=.
 
 ** Q: When should I use references vs ownership?
-*A*: 
+*A*:
 - Use =&T= when you just need to *read* data
 - Use =&mut T= when you need to *modify* data
 - Use =T= (ownership) when the function needs to *consume* or *store* the data

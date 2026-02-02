@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "modules/01_basics_ownership",
+    # Future modules will be added here as they're created
+    # "modules/02_borrowing_lifetimes",
+    # "modules/03_structs_enums",
+    # "modules/04_error_handling",
+    # "modules/05_traits_generics",
+    # "modules/06_collections_iterators",
+    # "modules/07_concurrency",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+
+# Shared dependencies can be defined here
+[workspace.dependencies]
+# Add common dependencies here when needed

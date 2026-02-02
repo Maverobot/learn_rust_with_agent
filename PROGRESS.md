@@ -1,0 +1,77 @@
+# Learning Progress
+
+Track your journey learning Rust here. Document insights, challenges, and breakthroughs!
+
+## Progress Overview
+
+- [ ] Module 1: Basics and Ownership
+- [ ] Module 2: Borrowing and Lifetimes
+- [ ] Module 3: Structs, Enums, and Pattern Matching
+- [ ] Module 4: Error Handling
+- [ ] Module 5: Traits and Generics
+- [ ] Module 6: Collections and Iterators
+- [ ] Module 7: Concurrency and Smart Pointers
+- [ ] Robotics Examples Project
+
+---
+
+## Learning Log
+
+### Session 1 - [Date: ]
+
+**Topics Covered:**
+-
+
+**Key Insights:**
+-
+
+**Comparison with C++:**
+-
+
+**Questions/Challenges:**
+-
+
+**Next Steps:**
+-
+
+---
+
+### Session 2 - [Date: ]
+
+**Topics Covered:**
+-
+
+**Key Insights:**
+-
+
+**Comparison with C++:**
+-
+
+**Questions/Challenges:**
+-
+
+**Next Steps:**
+-
+
+---
+
+## Quick Reference Notes
+
+### Things That Surprised Me
+-
+
+### Common Mistakes to Avoid
+-
+
+### Favorite Rust Features
+-
+
+### Rust vs C++ Quick Comparisons
+| Concept            | C++                 | Rust                       |
+|--------------------|---------------------|----------------------------|
+| Memory Management  | Manual (RAII)       | Ownership + Borrow Checker |
+| Null Pointers      | Can cause crashes   | Option<T> type             |
+| Error Handling     | Exceptions          | Result<T, E> type          |
+| Concurrency        | Data races possible | Prevented at compile time  |
+| Templates/Generics | Templates           | Generics + Traits          |
+| Inheritance        | Yes                 | No (composition preferred) |
